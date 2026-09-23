@@ -20,12 +20,13 @@
   const S = {
     conv:           { input: 0, output: 0 },
     streamBuf:      '',
-    streamTokAcc:   0,    // running delta-token accumulator during streaming
-    streamTimeout:  null, // safety timeout handle
+    streamTokAcc:   0,
+    streamTimeout:  null,
     isStreaming:    false,
-    // Exact counts from OpenAI's API usage field — overrides estimates when present
-    exactTotal:     0,    // prompt_tokens + completion_tokens from last response
-    hasExactData:   false, // true once we have at least one real API usage reading
+    // Exact counts from OpenAI's API usage field
+    exactTotal:     0,
+    hasExactData:   false,
+    coachHovered:   false, // true while mouse is over the coach panel
     model:          'gpt-4o',
     msgStats:       { msgCount: 0, dailyTokens: 0 },
     analysis:       null,
@@ -34,7 +35,6 @@
     coachTipsOpen:  false,
     coachDismissed: false,
     promptTimer:    null,
-    // DOM refs
     pillShadow:  null,
     pillHost:    null,
     coachShadow: null,
@@ -69,7 +69,8 @@
           S.streamBuf  = '';
           updatePill();
         }
-      }, 30000);
+      }, 10000);
+
     }
 
     if (type === 'STREAM_CHUNK') {
@@ -549,7 +550,27 @@
     CS('ts-coach-dismiss').addEventListener('click', (e) => {
       e.stopPropagation();
       S.coachDismissed = true;
+      S.coachHovered   = false;
       hideCoach();
+    });
+
+    // ─ Hover protection ───────────────────────────────────────
+    // Keep the coach visible while the user's cursor is over it.
+    // Without this, moving the mouse from the textarea toward the Apply
+    // button fires blur/focus events that call hideCoach before the user
+    // can interact with it.
+    S.coachHost.addEventListener('mouseenter', () => {
+      S.coachHovered = true;
+    });
+    S.coachHost.addEventListener('mouseleave', () => {
+      S.coachHovered = false;
+      // If the input is now empty (user cleared it while hovering coach)
+      // give them 600ms to potentially interact before hiding
+      const ta = findInput();
+      const txt = (ta?.textContent || ta?.value || '').trim();
+      if (!txt && !S.coachDismissed) {
+        setTimeout(() => { if (!S.coachHovered) hideCoach(); }, 600);
+      }
     });
   }
 
@@ -635,11 +656,12 @@
   }
 
   function hideCoach() {
-    // FIX: Cancel any pending analysis timer so coach can't reappear
-    // after the user sends a message (was a bug in v1)
+    // Don't hide if the user's mouse is currently over the coach
+    // (they may be moving toward the Apply button or tips)
+    if (S.coachHovered) return;
+
     clearTimeout(S.promptTimer);
     S.promptTimer = null;
-
     if (!S.coachHost) return;
     S.coachHost.style.pointerEvents = 'none';
     const coach = CS('ts-coach');
@@ -768,7 +790,9 @@
       if (text) S.coachDismissed = false;
 
       if (!text) {
-        hideCoach();
+        // Only hide coach if user isn't hovering over it
+        // (they might be reading the tips while the box is empty)
+        if (!S.coachHovered) hideCoach();
         return;
       }
 
