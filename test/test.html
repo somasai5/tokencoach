@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<!--
+  TokenSense QA Test Suite
+  Open this file directly in Chrome to validate all core logic
+  before loading the extension. No server needed.
+  
+  Usage: Open test/test.html in Chrome via File > Open File
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ TokenSense — QA Test Suite</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d1117;
+      --surface: rgba(255,255,255,0.05);
+      --border:  rgba(255,255,255,0.08);
+      --pass:    #34d399;
+      --fail:    #ef4444;
+      --warn:    #f59e0b;
+      --accent:  #818cf8;
+      --text:    #f1f5f9;
+      --muted:   #64748b;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #818cf8, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .title { font-size: 18px; font-weight: 700; }
+    .subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .summary-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .summary-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 100px;
+    }
+
+    .chip-num {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    .chip-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .chip-num.pass { color: var(--pass); }
+    .chip-num.fail { color: var(--fail); }
+    .chip-num.warn { color: var(--warn); }
+    .chip-num.total { color: var(--accent); }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .test-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .test-row {
+      display: grid;
+      grid-template-columns: 50px 1fr 70px 70px 70px 1fr;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      transition: border-color .2s;
+    }
+
+    .test-row.pass { border-color: rgba(52,211,153,.2); }
+    .test-row.fail { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.05); }
+    .test-row.warn { border-color: rgba(245,158,11,.25); background: rgba(245,158,11,.04); }
+
+    .test-id { font-size: 10px; font-weight: 700; color: var(--muted); font-family: monospace; }
+    .test-desc { font-size: 12px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .test-num { font-size: 12px; font-weight: 600; text-align: right; font-family: monospace; }
+    .expected { color: #818cf8; }
+    .actual   { color: #e2e8f0; }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 4px;
+    }
+    .status-dot.pass { background: var(--pass); }
+    .status-dot.fail { background: var(--fail); }
+    .status-dot.warn { background: var(--warn); }
+
+    .status-label { font-size: 11px; font-weight: 700; }
+    .status-label.pass { color: var(--pass); }
+    .status-label.fail { color: var(--fail); }
+    .status-label.warn { color: var(--warn); }
+
+    .test-note { font-size: 10px; color: var(--muted); }
+
+    /* Prompt tester */
+    .live-section {
+      background: rgba(129,140,248,0.06);
+      border: 1px solid rgba(129,140,248,0.2);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .live-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      resize: vertical;
+      min-height: 140px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    textarea:focus { border-color: rgba(129,140,248,.5); }
+
+    .analysis-panel {
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 14px;
+      min-height: 140px;
+    }
+
+    .score-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .big-score {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -2px;
+    }
+    .big-score.excellent { color: var(--pass); }
+    .big-score.good      { color: var(--accent); }
+    .big-score.fair      { color: var(--warn); }
+    .big-score.poor      { color: var(--fail); }
+
+    .grade-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      border-radius: 20px; padding: 3px 10px; letter-spacing: .06em;
+    }
+    .grade-badge.excellent { background: rgba(52,211,153,.15); color: var(--pass); }
+    .grade-badge.good      { background: rgba(129,140,248,.15); color: var(--accent); }
+    .grade-badge.fair      { background: rgba(245,158,11,.15); color: var(--warn); }
+    .grade-badge.poor      { background: rgba(239,68,68,.15); color: var(--fail); }
+
+    .sugg-item {
+      border-left: 2px solid;
+      border-radius: 0 6px 6px 0;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .sugg-item.high   { border-color: var(--fail);   background: rgba(239,68,68,.06); }
+    .sugg-item.medium { border-color: var(--warn);   background: rgba(245,158,11,.06); }
+    .sugg-item.low    { border-color: var(--accent);  background: rgba(129,140,248,.06); }
+    .sugg-title { font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .sugg-fix   { color: #6ee7b7; font-style: italic; font-size: 10px; }
+
+    .meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .meta-chip {
+      font-size: 10px; font-weight: 600;
+      background: rgba(255,255,255,.06); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 8px; color: #94a3b8;
+    }
+
+    .improved-box {
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,.2);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11px;
+      color: #a7f3d0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      margin-top: 10px;
+      font-family: monospace;
+    }
+
+    .improved-label {
+      font-size: 10px; font-weight: 700; color: var(--pass);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+
+    .col-header {
+      display: grid;
+      grid-template-columns: 50px 1fr 70px 70px 70px 1fr;
+      gap: 10px;
+      padding: 4px 12px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Load modules under test -->
+  <script src="../src/tokenizer.js"></script>
+  <script src="../src/prompt-engineer.js"></script>
+
+  <div class="header">
+    <div class="logo">⚡</div>
+    <div>
+      <div class="title">TokenSense QA Test Suite</div>
+      <div class="subtitle">Open in Chrome · Validates tokenizer and prompt engineer logic · No server needed</div>
+    </div>
+  </div>
+
+  <!-- Summary chips (filled by JS) -->
+  <div class="summary-bar" id="summary-bar">
+    <div class="summary-chip">
+      <span class="chip-num total" id="s-total">—</span>
+      <span class="chip-lbl">Total Tests</span>
+    </div>
+    <div class="summary-chip">
+      <span class="chip-num pass" id="s-pass">—</span>
+      <span class="chip-lbl">Passed</span>
+    </div>
+    <div class="summary-chip">
+      <span class="chip-num warn" id="s-warn">—</span>
+      <span class="chip-lbl">Warnings</span>
+    </div>
+    <div class="summary-chip">
+      <span class="chip-num fail" id="s-fail">—</span>
+      <span class="chip-lbl">Failed</span>
+    </div>
+  </div>
+
+  <!-- Tokenizer Tests -->
+  <div class="section">
+    <div class="section-title">Tokenizer Accuracy Tests <span style="color:#818cf8">(tolerance = ±2 from tiktoken reference)</span></div>
+    <div class="col-header">
+      <div>ID</div><div>Input</div><div>Expected</div><div>Got</div><div>Delta</div><div>Status</div>
+    </div>
+    <div class="test-grid" id="tok-results"></div>
+  </div>
+
+  <!-- Prompt Engineer Tests -->
+  <div class="section">
+    <div class="section-title">Prompt Engineer Analysis Tests</div>
+    <div class="test-grid" id="pe-results"></div>
+  </div>
+
+  <!-- Live Prompt Tester -->
+  <div class="section">
+    <div class="section-title">Live Prompt Tester (Interactive)</div>
+    <div class="live-section">
+      <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">
+        Type any prompt below to see real-time analysis. This is exactly what the extension does — same code, zero Chrome APIs needed.
+      </p>
+      <div class="live-grid">
+        <div>
+          <p style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Your Prompt</p>
+          <textarea id="live-input" placeholder="Type or paste your ChatGPT prompt here…"></textarea>
+        </div>
+        <div>
+          <p style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Analysis</p>
+          <div class="analysis-panel" id="live-analysis">
+            <p style="color:#475569;font-size:12px">Start typing to see analysis…</p>
+          </div>
+        </div>
+      </div>
+      <div id="live-improved" style="display:none">
+        <div class="improved-label" style="margin-top:14px">✨ Improved Prompt</div>
+        <div class="improved-box" id="live-improved-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ── Tokenizer Test Definitions ──────────────────────────────────────────
+    // expected values calibrated from tiktoken cl100k_base
+    const TOKENIZER_TESTS = [
+      { id: 'T01', text: '',                         expected: 0,   tol: 0,  note: 'Empty string' },
+      { id: 'T02', text: 'Hello',                    expected: 1,   tol: 0,  note: 'Single word' },
+      { id: 'T03', text: 'Hello world',              expected: 2,   tol: 1,  note: 'Two words' },
+      { id: 'T04', text: 'The quick brown fox',      expected: 4,   tol: 1,  note: '4 common words' },
+      { id: 'T05', text: 'I love programming',       expected: 3,   tol: 1,  note: 'Verb + noun' },
+      { id: 'T06', text: 'ChatGPT',                  expected: 3,   tol: 1,  note: 'Proper noun (sub-word BPE)' },
+      { id: 'T07', text: '12345',                    expected: 2,   tol: 1,  note: '5-digit number' },
+      { id: 'T08', text: 'Hello, world!',            expected: 4,   tol: 1,  note: 'With punctuation' },
+      { id: 'T09', text: 'You are an experienced software engineer.', expected: 7, tol: 2, note: 'Common prompt phrase' },
+      { id: 'T10', text: 'Explain machine learning\nstep by step',    expected: 7, tol: 2, note: 'With newline' },
+      { id: 'T11', text: 'function calculateTotal(data) { return data.reduce((acc, v) => acc + v, 0); }', expected: 26, tol: 6, note: 'JavaScript code' },
+      { id: 'T12', text: 'extraordinarily',          expected: 2,   tol: 1,  note: 'Long word (sub-word split)' },
+      { id: 'T13', text: "don't won't can't it's",   expected: 4,   tol: 2,  note: 'Contractions' },
+      { id: 'T14', text: 'The quick brown fox jumps over the lazy dog', expected: 9, tol: 2, note: 'Pangram (9 words)' },
+    ];
+
+    // ── Prompt Engineer Test Definitions ───────────────────────────────────
+    const PROMPT_TESTS = [
+      {
+        id: 'P01',
+        text: 'can you please explain machine learning to me',
+        expectGrade: 'poor',
+        minSugg: 3,
+        mustHave: ['role', 'fillers', 'format'],
+        note: 'Weak prompt — fillers + no role + no format',
+      },
+      {
+        id: 'P02',
+        text: 'You are an experienced data scientist. Explain the difference between supervised and unsupervised learning. Format your response as a numbered list. Keep it under 250 words for a technical audience.',
+        expectGrade: 'excellent',
+        maxSugg: 2,
+        note: 'Strong prompt — role + format + constraints',
+      },
+      {
+        id: 'P03',
+        text: 'Write code',
+        expectGrade: 'poor',
+        mustHave: ['specificity'],
+        note: 'Ultra-vague prompt',
+      },
+      {
+        id: 'P04',
+        text: 'Calculate the compound interest for $10,000 at 5% annual interest rate over 10 years. Show me the formula.',
+        expectGrade: 'fair',
+        mustHave: ['cot'],
+        note: 'Reasoning task — should suggest chain-of-thought',
+      },
+      {
+        id: 'P05',
+        text: 'just write a blog post',
+        expectGrade: 'poor',
+        mustHave: ['fillers', 'specificity'],
+        note: 'Filler + vague',
+      },
+      {
+        id: 'P06',
+        text: 'Act as a senior copywriter. Write a 500-word blog post about sustainable fashion targeting Gen Z readers. Use an informal, engaging tone. Structure with 3 sections: Problem, Solution, Call to Action.',
+        expectGrade: 'excellent',
+        maxSugg: 2,
+        note: 'Expert-level prompt',
+      },
+    ];
+
+    // ── Run Tokenizer Tests ─────────────────────────────────────────────────
+    let totalPass = 0, totalFail = 0, totalWarn = 0;
+
+    function runTokenizerTests() {
+      const container = document.getElementById('tok-results');
+      TOKENIZER_TESTS.forEach(t => {
+        const got   = TokenizerEngine.countTokens(t.text);
+        const delta = Math.abs(got - t.expected);
+        let status;
+        if (delta === 0)       status = 'pass';
+        else if (delta <= t.tol) status = 'warn';  // within tolerance
+        else                   status = 'fail';
+
+        if (status === 'pass') totalPass++;
+        else if (status === 'warn') { totalWarn++; }
+        else totalFail++;
+
+        const row = document.createElement('div');
+        row.className = `test-row ${status}`;
+        row.innerHTML = `
+          <span class="test-id">${t.id}</span>
+          <span class="test-desc" title="${escHtml(t.text)}">${escHtml(t.text || '(empty)')}</span>
+          <span class="test-num expected">${t.expected} ±${t.tol}</span>
+          <span class="test-num actual">${got}</span>
+          <span class="test-num" style="color:${delta===0?'#34d399':delta<=t.tol?'#f59e0b':'#ef4444'}">${delta===0?'✓':'+'+delta}</span>
+          <span class="status-label ${status}">
+            <span class="status-dot ${status}"></span>
+            ${status === 'pass' ? 'PASS' : status === 'warn' ? `WARN (±${delta})` : 'FAIL'}
+            <span class="test-note"> — ${escHtml(t.note)}</span>
+          </span>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // ── Run Prompt Engineer Tests ───────────────────────────────────────────
+    function runPromptTests() {
+      const container = document.getElementById('pe-results');
+      PROMPT_TESTS.forEach(t => {
+        const r = PromptEngineer.analyze(t.text);
+        let issues = [];
+        let status = 'pass';
+
+        // Check grade
+        if (t.expectGrade && r.grade !== t.expectGrade) {
+          issues.push(`Grade: expected "${t.expectGrade}" got "${r.grade}"`);
+          status = 'fail';
+        }
+
+        // Check min suggestions
+        if (t.minSugg !== undefined && r.suggestions.length < t.minSugg) {
+          issues.push(`Suggestions: expected ≥${t.minSugg} got ${r.suggestions.length}`);
+          status = 'fail';
+        }
+
+        // Check max suggestions (for good prompts)
+        if (t.maxSugg !== undefined && r.suggestions.length > t.maxSugg) {
+          issues.push(`Too many suggestions: expected ≤${t.maxSugg} got ${r.suggestions.length} — over-penalizing`);
+          status = status === 'fail' ? 'fail' : 'warn';
+        }
+
+        // Check required suggestion IDs
+        if (t.mustHave) {
+          const ids = r.suggestions.map(s => s.id);
+          t.mustHave.forEach(must => {
+            if (!ids.includes(must)) {
+              issues.push(`Missing suggestion: "${must}"`);
+              status = 'fail';
+            }
+          });
+        }
+
+        if (status === 'pass') totalPass++;
+        else if (status === 'warn') totalWarn++;
+        else totalFail++;
+
+        const row = document.createElement('div');
+        row.className = `test-row ${status}`;
+        const sugg_ids = r.suggestions.map(s => `<span class="meta-chip">${s.id}</span>`).join(' ');
+        row.innerHTML = `
+          <span class="test-id">${t.id}</span>
+          <span class="test-desc" title="${escHtml(t.text)}">${escHtml(t.text.slice(0,60))}${t.text.length>60?'…':''}</span>
+          <span class="test-num expected">Grade: ${t.expectGrade||'any'}</span>
+          <span class="test-num actual">
+            <span class="grade-badge ${r.grade}">${r.grade}</span>
+          </span>
+          <span class="test-num" style="font-size:11px;color:#94a3b8">${r.score}/100</span>
+          <span class="status-label ${status}">
+            <span class="status-dot ${status}"></span>
+            ${status==='pass'?'PASS':status==='warn'?'WARN':'FAIL'}
+            ${issues.length ? `<span class="test-note"> — ${issues.join(', ')}</span>` : `<span class="test-note"> — ${escHtml(t.note)}</span>`}
+          </span>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // ── Update Summary ──────────────────────────────────────────────────────
+    function updateSummary() {
+      const total = totalPass + totalFail + totalWarn;
+      document.getElementById('s-total').textContent = total;
+      document.getElementById('s-pass').textContent  = totalPass;
+      document.getElementById('s-warn').textContent  = totalWarn;
+      document.getElementById('s-fail').textContent  = totalFail;
+    }
+
+    // ── Live Prompt Tester ──────────────────────────────────────────────────
+    let liveTimer = null;
+    document.getElementById('live-input').addEventListener('input', (e) => {
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(() => renderLive(e.target.value), 200);
+    });
+
+    function renderLive(text) {
+      const panel   = document.getElementById('live-analysis');
+      const impWrap = document.getElementById('live-improved');
+      const impBox  = document.getElementById('live-improved-text');
+
+      if (!text.trim()) {
+        panel.innerHTML = '<p style="color:#475569;font-size:12px">Start typing to see analysis…</p>';
+        impWrap.style.display = 'none';
+        return;
+      }
+
+      const r    = PromptEngineer.analyze(text);
+      const toks = TokenizerEngine.countTokens(text);
+
+      const suggHtml = r.suggestions.slice(0,5).map(s => `
+        <div class="sugg-item ${s.priority}">
+          <div class="sugg-title">${s.icon} ${s.title}</div>
+          <div class="sugg-fix">→ ${escHtml(s.fix)}</div>
+        </div>
+      `).join('');
+
+      panel.innerHTML = `
+        <div class="score-display">
+          <span class="big-score ${r.grade}">${r.score}</span>
+          <div>
+            <span class="grade-badge ${r.grade}">${r.grade}</span>
+            <div style="font-size:10px;color:#64748b;margin-top:4px">/100 quality score</div>
+          </div>
+        </div>
+        <div class="meta-row">
+          <span class="meta-chip">📝 ${r.wordCount} words</span>
+          <span class="meta-chip">🔢 ${toks} tokens</span>
+          <span class="meta-chip">📏 ${text.length} chars</span>
+          ${r.fillerCount > 0 ? `<span class="meta-chip" style="color:#f87171">✂️ ${r.fillerCount} fillers</span>` : ''}
+        </div>
+        ${suggHtml || '<p style="color:#34d399;font-size:12px">✓ Excellent prompt! No improvements suggested.</p>'}
+      `;
+
+      if (r.improvedPrompt) {
+        impWrap.style.display = 'block';
+        impBox.textContent = r.improvedPrompt;
+      } else {
+        impWrap.style.display = 'none';
+      }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ── Run Everything ──────────────────────────────────────────────────────
+    if (typeof TokenizerEngine === 'undefined' || typeof PromptEngineer === 'undefined') {
+      document.body.innerHTML = `
+        <div style="padding:40px;color:#ef4444;font-family:monospace">
+          ⚠️ Could not load modules. Make sure you open this file from inside the 
+          <code>test/</code> folder so the relative paths <code>../src/tokenizer.js</code> 
+          and <code>../src/prompt-engineer.js</code> resolve correctly.
+          <br><br>Open via: Chrome → File → Open File → select test/test.html
+        </div>`;
+    } else {
+      runTokenizerTests();
+      runPromptTests();
+      updateSummary();
+    }
+  </script>
+</body>
+</html>
