@@ -1,0 +1,21 @@
+# Node / build artifacts
+node_modules/
+package-lock.json
+
+# The bundle is a build artifact — include it so users can load the extension
+# without needing Node.js. If you prefer to exclude it, uncomment the line below:
+# src/gpt-tokenizer-bundle.js
+
+# esbuild entry (build tooling only, not needed by the extension)
+src/gpt-tokenizer-entry.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Logs
+*.log
